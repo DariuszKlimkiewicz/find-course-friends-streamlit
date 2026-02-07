@@ -2,18 +2,18 @@ import streamlit as st
 import pandas as pd
 import json
 
-# =========================
+# =====================================================
 # KONFIGURACJA STRONY
-# =========================
+# =====================================================
 st.set_page_config(
     page_title="Znajdź znajomych na kursie",
     page_icon="🤝",
     layout="wide"
 )
 
-# =========================
+# =====================================================
 # WCZYTANIE DANYCH
-# =========================
+# =====================================================
 @st.cache_data
 def load_data():
     return pd.read_csv("clustered_data_v1.csv")
@@ -26,9 +26,9 @@ def load_cluster_descriptions():
 df = load_data()
 cluster_descriptions = load_cluster_descriptions()
 
-# =========================
-# MAPOWANIA
-# =========================
+# =====================================================
+# NAZWY KLASTRÓW
+# =====================================================
 CLUSTER_NAMES = {
     0: "🎯 Niezależni Indywidualiści",
     1: "🚀 Aktywni Millennialsi",
@@ -36,13 +36,10 @@ CLUSTER_NAMES = {
     3: "🌱 Niekonwencjonalni Odkrywcy"
 }
 
-# =========================
-# FUNKCJE POMOCNICZE
-# =========================
-def assign_cluster_rule_based(profile):
-    """
-    Regułowe przypisanie klastra – cloud-safe
-    """
+# =====================================================
+# FUNKCJA REGUŁOWA – PRZYPISANIE KLASTRA
+# =====================================================
+def assign_cluster(profile: dict) -> int:
     if profile["generation"] == "Millennialsi" and profile["edu_level"] == "Wyższe":
         return 1
     if profile["generation"] in ["Gen X", "Boomersi"]:
@@ -51,18 +48,18 @@ def assign_cluster_rule_based(profile):
         return 3
     return 0
 
-# =========================
+# =====================================================
 # HEADER
-# =========================
+# =====================================================
 st.title("🤝 Znajdź znajomych na kursie")
 st.markdown(
     "<span style='font-size:18px;'>Eksploruj społeczność kursu i znajdź osoby o podobnym profilu</span>",
     unsafe_allow_html=True
 )
 
-# =========================
+# =====================================================
 # SIDEBAR – FILTRY
-# =========================
+# =====================================================
 st.sidebar.header("🔎 Filtruj kursantów")
 
 gender_filter = st.sidebar.multiselect(
@@ -82,9 +79,9 @@ filtered_df = df[
     (df["generation"].isin(generation_filter))
 ]
 
-# =========================
+# =====================================================
 # EKSPLORACJA SPOŁECZNOŚCI
-# =========================
+# =====================================================
 st.subheader("📊 Eksploracja społeczności kursu")
 st.markdown(f"**Liczba kursantów po filtrach:** {len(filtered_df)}")
 
@@ -96,36 +93,44 @@ cluster_counts = (
 )
 
 cluster_counts.columns = ["Cluster", "Liczba"]
-
-cluster_counts["Profil"] = cluster_counts["Cluster"].map(CLUSTER_NAMES)
+cluster_counts["Profil klastra"] = cluster_counts["Cluster"].map(CLUSTER_NAMES)
 
 st.bar_chart(
-    cluster_counts.set_index("Profil")["Liczba"],
+    cluster_counts.set_index("Profil klastra")["Liczba"],
     height=300
 )
 
-# =========================
+# =====================================================
 # ZNAJDŹ SWÓJ PROFIL
-# =========================
+# =====================================================
 st.divider()
 st.subheader("🧬 Znajdź swój profil")
 
 with st.form("profile_form"):
-    age_group = st.selectbox("Przedział wiekowy", sorted(df["age"].unique()))
-    edu_level = st.selectbox("Wykształcenie", sorted(df["edu_level"].unique()))
-    fav_animals = st.selectbox("Ulubione zwierzęta", sorted(df["fav_animals"].unique()))
-    fav_place = st.selectbox("Ulubione miejsce", sorted(df["fav_place"].unique()))
-    gender = st.selectbox("Płeć", sorted(df["gender"].dropna().unique()))
-
-    submit = st.form_submit_button("🔍 Znajdź mój profil")
-
-if submit:
-    generation = (
-        df[df["age"] == age_group]["generation"]
-        .value_counts()
-        .idxmax()
+    generation = st.selectbox(
+        "Pokolenie",
+        sorted(df["generation"].dropna().unique())
+    )
+    edu_level = st.selectbox(
+        "Wykształcenie",
+        sorted(df["edu_level"].dropna().unique())
+    )
+    fav_animals = st.selectbox(
+        "Ulubione zwierzęta",
+        sorted(df["fav_animals"].dropna().unique())
+    )
+    fav_place = st.selectbox(
+        "Ulubione miejsce",
+        sorted(df["fav_place"].dropna().unique())
+    )
+    gender = st.selectbox(
+        "Płeć",
+        sorted(df["gender"].dropna().unique())
     )
 
+    submitted = st.form_submit_button("🔍 Znajdź mój profil")
+
+if submitted:
     user_profile = {
         "generation": generation,
         "edu_level": edu_level,
@@ -134,31 +139,33 @@ if submit:
         "gender": gender
     }
 
-    user_cluster = assign_cluster_rule_based(user_profile)
-    cluster_name = CLUSTER_NAMES[user_cluster]
-    cluster_desc = cluster_descriptions[str(user_cluster)]
+    cluster_id = assign_cluster(user_profile)
+    cluster_name = CLUSTER_NAMES[cluster_id]
+    cluster_desc = cluster_descriptions[str(cluster_id)]
 
     st.success(f"✨ Twój profil społeczny: **{cluster_name}**")
     st.markdown(cluster_desc)
 
-    similar_people = filtered_df[filtered_df["Cluster"] == user_cluster]
+    similar_people = filtered_df[filtered_df["Cluster"] == cluster_id]
 
     st.markdown("### 👥 Osoby o podobnym profilu")
     st.dataframe(
-        similar_people[[
-            "age",
-            "generation",
-            "gender",
-            "edu_level",
-            "fav_animals",
-            "fav_place"
-        ]].head(10),
+        similar_people[
+            [
+                "generation",
+                "gender",
+                "edu_level",
+                "fav_animals",
+                "fav_place"
+            ]
+        ].head(10),
         width="stretch"
     )
 
-# =========================
+# =====================================================
 # STOPKA
-# =========================
+# =====================================================
 st.divider()
 st.caption("Projekt: Znajdź znajomych na kursie przygotował Dariusz Klimkiewicz")
+
 
