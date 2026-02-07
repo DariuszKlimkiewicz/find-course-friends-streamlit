@@ -1,0 +1,18 @@
+{
+  "Cluster 0": {
+    "name": "🎭 Nisza Indywidualistów",
+    "description": "Mniej liczna, ale bardzo wyrazista grupa. Osoby z tego klastra nie przepadają za utartymi schematami i często wybierają własne, nieoczywiste ścieżki. Jeśli cenisz niezależność i oryginalność – możesz się tu odnaleźć."
+  },
+  "Cluster 1": {
+    "name": "🏔️ Aktywni Millennialsi",
+    "description": "Najliczniejsza grupa na kursie. Lubią psy, góry i wodę, a naukę traktują praktycznie. Chętnie rozmawiają o projektach i wspólnych pomysłach – dobry wybór, jeśli szukasz aktywnych znajomych."
+  },
+  "Cluster 2": {
+    "name": "🌲 Doświadczenie rozumiane jako podejście do nauki i myślenia, a nie liczba lat",
+    "description": "Profil oparty na spokojnym, strategicznym podejściu do nauki i myślenia długofalowego. Doświadczenie rozumiane jest tu jako styl działania i podejście, a nie wiek czy staż zawodowy. Świetni rozmówcy do merytorycznych dyskusji."
+  },
+  "Cluster 3": {
+    "name": "🧪 Niekonwencjonalni Odkrywcy",
+    "description": "Osoby, które nie zawsze wpisują się w typowe kategorie. Lubią różnorodność, nieszablonowe zainteresowania i świeże spojrzenie. Idealni, jeśli cenisz oryginalność i otwartość."
+  }
+}
