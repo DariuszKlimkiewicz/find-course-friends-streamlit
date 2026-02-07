@@ -3,7 +3,8 @@ import pandas as pd
 import json
 import re
 import altair as alt
-from pycaret.clustering import load_model, predict_model
+import joblib
+
 
 # ======================
 # Konfiguracja strony
@@ -22,7 +23,7 @@ def load_clustered_data():
 
 @st.cache_resource
 def load_clustering_model():
-    return load_model("friends_clustering_model_v1")
+    return joblib.load("friends_clustering_model_v1.pkl")
 
 with open("cluster_descriptions.json", "r", encoding="utf-8") as f:
     CLUSTER_DESCRIPTIONS = json.load(f)
@@ -202,8 +203,8 @@ if st.session_state.run_prediction:
         "edu_level": data["edu_level"]
     }])
 
-    prediction = predict_model(model, data=user_df)
-    cluster_id = prediction.loc[0, "Cluster"]
+    cluster_id = model.predict(user_df)[0]
+
     info = CLUSTER_DESCRIPTIONS.get(cluster_id, {})
 
     st.markdown("---")
@@ -216,4 +217,4 @@ if st.session_state.run_prediction:
 # ======================
 # STOPKA
 # ======================
-st.caption("Projekt: Znajdź znajomych na kursie • Streamlit • Clustering")
+st.caption("Projekt: Znajdź znajomych na kursie przygotował Dariusz Klimkiewicz")
