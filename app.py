@@ -3,7 +3,6 @@ import pandas as pd
 import json
 import re
 import altair as alt
-from pycaret.clustering import load_model, predict_model
 
 # ======================
 # Konfiguracja strony
@@ -14,21 +13,17 @@ st.set_page_config(
 )
 
 # ======================
-# Wczytanie danych i modelu
+# Wczytanie danych
 # ======================
 @st.cache_data
 def load_clustered_data():
     return pd.read_csv("clustered_data_v1.csv")
 
-@st.cache_resource
-def load_clustering_model():
-    return load_model("friends_clustering_model_v1")
-
 with open("cluster_descriptions.json", "r", encoding="utf-8") as f:
     CLUSTER_DESCRIPTIONS = json.load(f)
 
 df = load_clustered_data()
-model = load_clustering_model()
+
 
 # ======================
 # SIDEBAR – FILTRY
@@ -141,9 +136,6 @@ st.altair_chart(chart, width="stretch")
 st.markdown("---")
 st.header("🧑‍🤝‍🧑 Znajdź swój profil")
 
-if "run_prediction" not in st.session_state:
-    st.session_state.run_prediction = False
-
 def age_range_to_number(age):
     age = str(age)
 
@@ -157,10 +149,10 @@ def age_range_to_number(age):
 
     return None
 
+
 def map_generation(age):
     if age is None:
         return "Nieznane"
-
     if age <= 25:
         return "Gen Z"
     elif age <= 40:
@@ -170,51 +162,64 @@ def map_generation(age):
     else:
         return "Boomersi"
 
+
 with st.form("user_form"):
-    age = st.selectbox("Przedział wiekowy", ["18-24", "25-34", "35-44", "45-54", "55+"])
-    edu_level = st.selectbox("Wykształcenie", ["Podstawowe", "Średnie", "Wyższe"])
-    fav_animals = st.selectbox("Ulubione zwierzęta", ["Psy", "Koty", "Koty i Psy", "Inne", "Brak ulubionych"])
-    fav_place = st.selectbox("Ulubione miejsce", ["W górach", "Nad wodą", "W lesie", "Inne"])
-    gender = st.selectbox("Płeć", ["Kobieta", "Mężczyzna"])
+    age = st.selectbox(
+        "Przedział wiekowy",
+        ["18-24", "25-34", "35-44", "45-54", "55+"]
+    )
+    edu_level = st.selectbox(
+        "Wykształcenie",
+        ["Podstawowe", "Średnie", "Wyższe"]
+    )
+    fav_animals = st.selectbox(
+        "Ulubione zwierzęta",
+        ["Psy", "Koty", "Koty i Psy", "Inne", "Brak ulubionych"]
+    )
+    fav_place = st.selectbox(
+        "Ulubione miejsce",
+        ["W górach", "Nad wodą", "W lesie", "Inne"]
+    )
+    gender = st.selectbox(
+        "Płeć",
+        ["Kobieta", "Mężczyzna"]
+    )
 
     submit = st.form_submit_button("🔍 Znajdź mój profil")
 
-    if submit:
-        st.session_state.run_prediction = True
-        st.session_state.user_input = {
-            "age": age,
-            "edu_level": edu_level,
-            "fav_animals": fav_animals,
-            "fav_place": fav_place,
-            "gender": gender
-        }
-
-if st.session_state.run_prediction:
-    data = st.session_state.user_input
-    age_num = age_range_to_number(data["age"])
+if submit:
+    age_num = age_range_to_number(age)
     generation = map_generation(age_num)
 
-    user_df = pd.DataFrame([{
+    user_profile = {
         "generation": generation,
-        "gender": data["gender"],
-        "fav_animals": data["fav_animals"],
-        "fav_place": data["fav_place"],
-        "edu_level": data["edu_level"]
-    }])
+        "gender": gender,
+        "fav_animals": fav_animals,
+        "fav_place": fav_place,
+        "edu_level": edu_level,
+    }
 
-    # === CLOUD-SAFE PRZYPISANIE KLASTRA ===
-    matches = df[
-        (df["generation"] == generation)
-        & (df["gender"] == data["gender"])
-        & (df["fav_animals"] == data["fav_animals"])
-        & (df["fav_place"] == data["fav_place"])
-        & (df["edu_level"] == data["edu_level"])
-    ]
+    # --- Punktowe dopasowanie profilu (cloud-safe) ---
+    def similarity_score(row, profile):
+        score = 0
+        for key, value in profile.items():
+            if row[key] == value:
+                score += 1
+        return score
 
-    if len(matches) > 0:
-        cluster_id = matches["Cluster"].mode()[0]
-    else:
-        cluster_id = df["Cluster"].mode()[0]
+    scored_df = df.copy()
+    scored_df["score"] = scored_df.apply(
+        lambda row: similarity_score(row, user_profile),
+        axis=1
+    )
+
+    # wybieramy klaster z najwyższą średnią punktów
+    cluster_id = (
+        scored_df
+        .groupby("Cluster")["score"]
+        .mean()
+        .idxmax()
+    )
 
     info = CLUSTER_DESCRIPTIONS.get(cluster_id, {})
 
@@ -223,7 +228,10 @@ if st.session_state.run_prediction:
     st.markdown(f"### {info.get('name', cluster_id)}")
     st.write(info.get("description", "Brak opisu profilu."))
 
-    st.info("To osoby o podobnych preferencjach i stylu – z nimi najłatwiej złapać wspólny kontakt.")
+    st.info(
+        "Profil został dopasowany na podstawie podobieństwa cech "
+        "do uczestników kursu."
+    )
 
 # ======================
 # STOPKA
