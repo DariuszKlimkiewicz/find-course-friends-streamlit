@@ -202,8 +202,20 @@ if st.session_state.run_prediction:
         "edu_level": data["edu_level"]
     }])
 
-    prediction = predict_model(model, data=user_df)
-    cluster_id = prediction.loc[0, "Cluster"]
+    # === CLOUD-SAFE PRZYPISANIE KLASTRA ===
+    matches = df[
+        (df["generation"] == generation)
+        & (df["gender"] == data["gender"])
+        & (df["fav_animals"] == data["fav_animals"])
+        & (df["fav_place"] == data["fav_place"])
+        & (df["edu_level"] == data["edu_level"])
+    ]
+
+    if len(matches) > 0:
+        cluster_id = matches["Cluster"].mode()[0]
+    else:
+        cluster_id = df["Cluster"].mode()[0]
+
     info = CLUSTER_DESCRIPTIONS.get(cluster_id, {})
 
     st.markdown("---")
